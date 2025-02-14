@@ -1,2 +1,2 @@
 import Bounce from "@/components/bouncing";
-export default Bounce
+export default Bounce;
