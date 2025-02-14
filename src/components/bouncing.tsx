@@ -5,95 +5,105 @@ import { Input } from "@/components/ui/input";
 import { PictureInPicture } from "lucide-react";
 import { Label } from "@/components/ui/label";
 
+type images = {
+  src: string;
+  x: number;
+  y: number;
+  dx: number;
+  dy: number;
+};
+
 const Bounce = () => {
-  const [position, setPosition] = useState({ x: 100, y: 100 });
-  const [velocity, setVelocity] = useState({ dx: 2, dy: 2 });
-  const [image, setImage] = useState<string | null>(null);
+  const [images, setImages] = useState<images[]>([]);
   const animationFrameRef = useRef<number>();
 
   useEffect(() => {
-    if (!image) return;
+    if (images.length === 0) return;
 
-    const moveLogo = () => {
-      setPosition((prev) => {
-        let newX = prev.x + velocity.dx;
-        let newY = prev.y + velocity.dy;
+    const moveImages = () => {
+      setImages((prevImages) =>
+        prevImages.map((img) => {
+          const newX = img.x + img.dx;
+          const newY = img.y + img.dy;
 
-        const screenWidth = window.innerWidth;
-        const screenHeight = window.innerHeight;
-        const logoWidth = 100;
-        const logoHeight = 50;
+          const screenWidth = window.innerWidth;
+          const screenHeight = window.innerHeight;
+          const logoWidth = 100;
+          const logoHeight = 50;
 
-        let newDx = velocity.dx;
-        let newDy = velocity.dy;
+          let newDx = img.dx;
+          let newDy = img.dy;
 
-        // bouncing the walls
-        if (newX <= 0) {
-          newX = 0;
-          newDx = Math.abs(velocity.dx); //  right
-        } else if (newX + logoWidth >= screenWidth) {
-          newX = screenWidth - logoWidth;
-          newDx = -Math.abs(velocity.dx); //  left
-        }
+          if (newX <= 0 || newX + logoWidth >= screenWidth) {
+            newDx = -newDx;
+          }
+          if (newY <= 0 || newY + logoHeight >= screenHeight) {
+            newDy = -newDy;
+          }
 
-        if (newY <= 0) {
-          newY = 0;
-          newDy = Math.abs(velocity.dy); //  down
-        } else if (newY + logoHeight >= screenHeight) {
-          newY = screenHeight - logoHeight;
-          newDy = -Math.abs(velocity.dy); // bunce up
-        }
+          return { ...img, x: newX, y: newY, dx: newDx, dy: newDy };
+        }),
+      );
 
-        // Update velocity state
-        setVelocity({ dx: newDx, dy: newDy });
-
-        return { x: newX, y: newY };
-      });
-
-      // Request the next frame
-      animationFrameRef.current = requestAnimationFrame(moveLogo);
+      animationFrameRef.current = requestAnimationFrame(moveImages);
     };
 
-    // Start the animation
-    animationFrameRef.current = requestAnimationFrame(moveLogo);
+    animationFrameRef.current = requestAnimationFrame(moveImages);
 
-    // Cleanup on unmount
     return () => {
-      if (animationFrameRef.current) {
+      if (animationFrameRef.current)
         cancelAnimationFrame(animationFrameRef.current);
-      }
     };
-  }, [velocity, image]);
+  }, [images]);
 
   const imageUpload: React.ChangeEventHandler<HTMLInputElement> = (e) => {
-    const file = e.target.files?.[0];
-    if (file) setImage(URL.createObjectURL(file));
+    const files = e.target.files;
+    if (files) {
+      const newImages = Array.from(files).map((file) => ({
+        src: URL.createObjectURL(file),
+        x: Math.random() * window.innerWidth * 0.8,
+        y: Math.random() * window.innerHeight * 0.8,
+        dx: (Math.random() - 0.5) * 4,
+        dy: (Math.random() - 0.5) * 4,
+      }));
+      setImages((prev) => [...prev, ...newImages]);
+    }
   };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
       <Label className="flex flex-col items-center text-base font-semibold">
-        Add an Image
-        <PictureInPicture size={25} className="cursor-pointer" />
+        Add Images
+        <PictureInPicture
+          size={25}
+          className="cursor-pointer hover:scale-105 duration-300 text-black hover:text-blue-600"
+        />
         <Input
           type="file"
           accept="image/*"
+          multiple
           onChange={imageUpload}
           className="hidden"
         />
       </Label>
 
-      {image && (
+      {images.map((img, index) => (
         <div
+          key={index}
           className="fixed"
           style={{
-            left: `${position.x}px`,
-            top: `${position.y}px`,
+            left: `${img.x}px`,
+            top: `${img.y}px`,
           }}
         >
-          <Image src={image} alt="Moving image" width={100} height={50} />
+          <Image
+            src={img.src}
+            alt={`moving image ${index}`}
+            width={100}
+            height={50}
+          />
         </div>
-      )}
+      ))}
     </div>
   );
 };
